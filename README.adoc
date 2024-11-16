@@ -1,0 +1,173 @@
+= CacheManager Go
+:icons: font
+:source-highlighter: coderay
+
+[badge]
+image::https://github.com/ethan-k/cachemanager-go/actions/workflows/ci.yml/badge.svg[CI]
+image::https://goreportcard.com/badge/github.com/ethan-k/cachemanager-go[Go Report Card]
+image::https://img.shields.io/github/license/ethan-k/cachemanager-go[License]
+
+
+Inspired by Spring Framework’s CacheManager. **CacheManager** is a flexible and efficient caching library for Go applications.
+It provides a unified interface to manage multiple caching backends, including in-memory and Redis, ensuring high performance and scalability for your applications.
+
+== Features
+
+* **Multiple Backend Support**: Seamlessly switch between in-memory and Redis caching backends.
+* **Extensible Architecture**: Easily add new caching backends by implementing the `CacheBackend` interface.
+* **Flexible TTL Management**: Assign time-to-live (TTL) values to cached items for automatic expiration.
+
+== Installation
+
+Ensure you have [Go](https://golang.org/dl/) installed (version 1.22 or later is recommended).
+
+To install CacheManager, use `go get`:
+
+[source,bash]
+----
+go get github.com/ethan-k/cachemanager-go
+----
+
+== Usage
+
+=== In-Memory Cache
+
+The in-memory cache is suitable for applications that require fast, ephemeral storage without persistence.
+
+[source,go]
+----
+import (
+    "context"
+    "time"
+    "fmt"
+
+    "github.com/ethan-k/cachemanager-go/backend/inmemory"
+)
+
+func main() {
+    ctx := context.Background()
+    cache := inmemory.NewInMemoryCache()
+
+    // Set a value with a TTL of 5 minutes
+    err := cache.Set(ctx, "key1", "value1", 5*time.Minute)
+    if err != nil {
+        // handle error
+    }
+
+    // Retrieve the value
+    value, exists, err := cache.Get(ctx, "key1")
+    if err != nil {
+        // handle error
+    }
+    if exists {
+        fmt.Println("Value:", value)
+    } else {
+        fmt.Println("Key not found or expired.")
+    }
+}
+----
+
+=== Redis Cache
+
+Use Redis as a caching backend for distributed applications requiring persistence and scalability.
+
+[source,go]
+----
+import (
+    "context"
+    "time"
+    "fmt"
+
+    "github.com/ethan-k/cachemanager-go/backend/redis"
+)
+
+func main() {
+    ctx := context.Background()
+    redisClient := redis.NewGoRedisAdapter("localhost:6379", redis.WithPassword("yourpassword"), redis.WithDB(0))
+    cache := redis.NewRedisCache(redisClient)
+
+    // Set a value with a TTL of 10 minutes
+    err := cache.Set(ctx, "key2", "value2", 10*time.Minute)
+    if err != nil {
+        // handle error
+    }
+
+    // Retrieve the value
+    value, exists, err := cache.Get(ctx, "key2")
+    if err != nil {
+        // handle error
+    }
+    if exists {
+        fmt.Println("Value:", value)
+    } else {
+        fmt.Println("Key not found or expired.")
+    }
+}
+----
+
+=== Cache Manager
+
+Manage multiple caching backends with a unified interface.
+The `CacheManager` orchestrates the backends, ensuring data consistency and high availability.
+
+**Initialization:**
+
+[source,go]
+----
+import (
+    "context"
+    "time"
+    "fmt"
+
+    "github.com/ethan-k/cachemanager-go/cachemanager"
+    "github.com/ethan-k/cachemanager-go/backend/inmemory"
+    "github.com/ethan-k/cachemanager-go/backend/redis"
+)
+
+func main() {
+    ctx := context.Background()
+
+    // Initialize backends
+    inMemCache := inmemory.NewInMemoryCache()
+    redisClient := redis.NewGoRedisAdapter("localhost:6379", redis.WithPassword("yourpassword"), redis.WithDB(0))
+    redisCache := redis.NewRedisCache(redisClient)
+
+    // Configure CacheManager with backends and their TTLs
+    cacheManager := cachemanager.NewCacheManager(
+        cachemanager.CacheConfig{Backend: inMemCache, TTL: 5 * time.Minute},
+        cachemanager.CacheConfig{Backend: redisCache, TTL: 10 * time.Minute},
+    )
+
+    // Set a value in all backends
+    err := cacheManager.Set(ctx, "key3", "value3")
+    if err != nil {
+        // handle error
+    }
+
+    // Get a value from the cache chain
+    value, err := cacheManager.Get(ctx, "key3")
+    if err != nil {
+        // handle error
+    }
+    if value != nil {
+        fmt.Println("Value:", value)
+    } else {
+        fmt.Println("Key not found in any backend.")
+    }
+
+    // Delete a value from all backends
+    err = cacheManager.Delete(ctx, "key3")
+    if err != nil {
+        // handle error
+    }
+}
+----
+
+== Contributing
+
+Contributions are welcome!
+Whether it's reporting a bug, suggesting a feature, or submitting a pull request, your input helps improve CacheManager.
+
+== License
+
+This project is licensed under the MIT License.
