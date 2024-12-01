@@ -34,6 +34,10 @@ func (m *mockBackend) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
+func (m *mockBackend) Close() error {
+	return nil
+}
+
 func TestCacheManager_Get(t *testing.T) {
 	tests := []struct {
 		name          string

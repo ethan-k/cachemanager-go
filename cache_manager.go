@@ -10,6 +10,12 @@ type CacheBackend interface {
 	Get(ctx context.Context, key string) (any, bool, error)
 	Set(ctx context.Context, key string, value any, ttl time.Duration) error
 	Delete(ctx context.Context, key string) error
+	Close() error
+}
+
+type CacheBackendWithInvalidationChannel interface {
+	CacheBackend
+	GetInvalidationChannel() <-chan string
 }
 
 // CacheConfig holds configuration for a single cache backend
@@ -24,9 +30,18 @@ type CacheManager struct {
 }
 
 func NewCacheManager(configs ...CacheConfig) *CacheManager {
-	return &CacheManager{
+	cm := &CacheManager{
 		backends: configs,
 	}
+
+	// Start listening for invalidation events from all backends
+	for i, config := range configs {
+		if cacheBackend, ok := config.Backend.(CacheBackendWithInvalidationChannel); ok {
+			go cm.handleInvalidation(context.Background(), cacheBackend.GetInvalidationChannel(), i)
+		}
+	}
+
+	return cm
 }
 
 // Get retrieves a value from the cache chain
@@ -85,4 +100,30 @@ func (cm *CacheManager) populatePreviousBackends(ctx context.Context, key string
 		config := cm.backends[i]
 		_ = config.Backend.Set(ctx, key, value, config.TTL)
 	}
+}
+
+// handleInvalidation processes cache invalidation events from a backend
+func (cm *CacheManager) handleInvalidation(ctx context.Context, invalidationChan <-chan string, sourceIndex int) {
+	for key := range invalidationChan {
+		// Delete from all other backends except the source
+		for i, config := range cm.backends {
+			if i != sourceIndex {
+				// Use a new context for each delete operation
+				deleteCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+				_ = config.Backend.Delete(deleteCtx, key)
+				cancel()
+			}
+		}
+	}
+}
+
+// Close closes all cache backends
+func (cm *CacheManager) Close() error {
+	var lastErr error
+	for i, config := range cm.backends {
+		if err := config.Backend.Close(); err != nil {
+			lastErr = fmt.Errorf("error closing backend %d: %w", i, err)
+		}
+	}
+	return lastErr
 }

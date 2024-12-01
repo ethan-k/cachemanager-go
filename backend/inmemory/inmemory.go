@@ -116,21 +116,19 @@ func (c *Cache) Set(_ context.Context, key string, value any, ttl time.Duration)
 	return nil
 }
 
-func (c *Cache) Stop() {
-	close(c.stopCleanup)
-}
-
-func (c *Cache) Delete(_ context.Context, key string) error {
+func (c *Cache) Delete(ctx context.Context, key string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-
 	delete(c.data, key)
+	return nil
+}
 
-	if elem, exists := c.ageElements[key]; exists {
-		c.ageList.Remove(elem)
-		delete(c.ageElements, key)
-	}
+func (c *Cache) GetInvalidationChannel() <-chan string {
+	return nil
+}
 
+func (c *Cache) Close() error {
+	close(c.stopCleanup)
 	return nil
 }
 

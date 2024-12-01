@@ -73,3 +73,12 @@ func (g *goRedisClient) Set(ctx context.Context, key string, value any, ttl time
 func (g *goRedisClient) Del(ctx context.Context, key string) error {
 	return g.client.Del(ctx, key).Err()
 }
+
+func (g *goRedisClient) Close() error {
+	return g.client.Close()
+}
+
+// StartInvalidationListener client-side-caching is not supported for go-redis
+func (g *goRedisClient) StartInvalidationListener(ctx context.Context) (<-chan string, error) {
+	return nil, nil
+}
