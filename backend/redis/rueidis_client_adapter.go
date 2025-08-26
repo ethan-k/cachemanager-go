@@ -90,5 +90,5 @@ func (c *rueidisClient) Close() error {
 // StartInvalidationListener returns a nil channel for now.
 // Note: Proper client-side invalidation handling via rueidis can be implemented later.
 func (c *rueidisClient) StartInvalidationListener(ctx context.Context) (<-chan string, error) {
-    return nil, nil
+	return nil, nil
 }
