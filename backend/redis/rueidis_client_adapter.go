@@ -87,34 +87,8 @@ func (c *rueidisClient) Close() error {
 	return nil
 }
 
-// StartInvalidationListener starts listening for cache invalidation messages
-// It returns a channel that will receive invalidated keys
+// StartInvalidationListener returns a nil channel for now.
+// Note: Proper client-side invalidation handling via rueidis can be implemented later.
 func (c *rueidisClient) StartInvalidationListener(ctx context.Context) (<-chan string, error) {
-	invalidatedKeys := make(chan string, 100)
-
-	// Start the invalidation message handler
-	go func() {
-		defer close(invalidatedKeys)
-
-		c.client.Receive(ctx)
-		for msg := range c.client.Receive(ctx) {
-			// Handle invalidation message
-			if msg.Error != nil {
-				continue
-			}
-			if len(msg.Message) >= 2 {
-				switch msg.Message[0] {
-				case "invalidate":
-					// Message format: ["invalidate", key]
-					invalidatedKeys <- msg.Message[1]
-				case "switched":
-					// Reconnection happened, need to re-enable tracking
-					cmd := c.client.B().ClientTracking().On().Optin().Build()
-					_ = c.client.Do(ctx, cmd).Error()
-				}
-			}
-		}
-	}()
-
-	return invalidatedKeys, nil
+    return nil, nil
 }

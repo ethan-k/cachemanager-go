@@ -26,10 +26,11 @@ func (s *RedisCacheTestSuite) SetupTest() {
 	s.mr, err = miniredis.Run()
 	require.NoError(s.T(), err)
 
-	s.client = redis.NewClient(&redis.Options{
+    s.client = redis.NewClient(&redis.Options{
 		Addr: s.mr.Addr(),
 	})
-	s.cache = NewRedisCache(NewGoRedisAdapter(s.mr.Addr()))
+    s.cache, err = NewRedisCache(NewGoRedisAdapter(s.mr.Addr()))
+    require.NoError(s.T(), err)
 	s.ctx = context.Background()
 }
 
